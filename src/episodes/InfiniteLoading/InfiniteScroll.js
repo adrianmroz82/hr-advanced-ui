@@ -19,6 +19,7 @@ const BeerWrapper = styled.div`
   img {
     height: 400px;
     object-fit: contain;
+    padding: 10px;
   }
 
   div {
@@ -95,7 +96,6 @@ const InfiniteScroll = () => {
     );
 
     if (lastElementRef.current) {
-      console.log(lastElementRef.current);
       observer.current.observe(lastElementRef.current);
     }
 
@@ -106,7 +106,6 @@ const InfiniteScroll = () => {
 
   return (
     <>
-      <button onClick={getMoreBeers}>load more</button>
       <Wrapper>
         {beers.map((beer, i) => {
           if (i === beers.length - 1) return <Beer key={i} beer={beer} ref={lastElementRef} />;
