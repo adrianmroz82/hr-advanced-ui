@@ -43,9 +43,9 @@ const trimName = (name) => {
   return `${words[0]} ${words[1]}`;
 };
 
-const Beer = ({ beer: { image_url, name, abv } }) => {
+const Beer = React.forwardRef(({ beer: { image_url, name, abv } }, ref) => {
   return (
-    <BeerWrapper>
+    <BeerWrapper ref={ref}>
       <img style={{ height: "300px" }} src={image_url} alt={name} />
       <div>
         <p>{name.length > 12 ? trimName(name) : name}</p>
@@ -53,37 +53,67 @@ const Beer = ({ beer: { image_url, name, abv } }) => {
       </div>
     </BeerWrapper>
   );
-};
+});
 
 const InfiniteScroll = () => {
   const [beers, setBeers] = useState([]);
   const [page, setPage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const lastElementRef = useRef(null);
+  const observer = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
       const res = await fetchBeers();
-      //   setBeers([...res.items]);
-      setBeers(res.items);
+      setBeers([...res.items]);
       setPage(res.page);
     };
 
     fetchData();
   }, []);
 
-  const getMoreBeers = async () => {
+  const getMoreBeers = useCallback(async () => {
+    setIsLoading(true);
+    if (!page || !page.next) return;
     const res = await fetchBeers(page.next);
     setBeers([...beers, ...res.items]);
     setPage(res.page);
-  };
+  }, [beers, page]);
+
+  useEffect(() => {
+    observer.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          getMoreBeers();
+        }
+      },
+      {
+        root: document,
+        threshold: 0.5,
+        rootMargin: "50px",
+      }
+    );
+
+    if (lastElementRef.current) {
+      console.log(lastElementRef.current);
+      observer.current.observe(lastElementRef.current);
+    }
+
+    return () => {
+      observer.current.disconnect();
+    };
+  }, [getMoreBeers]);
 
   return (
     <>
       <button onClick={getMoreBeers}>load more</button>
       <Wrapper>
-        {beers.map((beer, i) => (
-          <Beer key={i} beer={beer} />
-        ))}
+        {beers.map((beer, i) => {
+          if (i === beers.length - 1) return <Beer key={i} beer={beer} ref={lastElementRef} />;
+          return <Beer key={i} beer={beer} />;
+        })}
       </Wrapper>
+      {isLoading && <div>LOADING MORE</div>}
     </>
   );
 };
